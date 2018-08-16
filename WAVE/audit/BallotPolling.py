@@ -57,7 +57,6 @@ class BallotPolling(audit.Audit):
 
     def get_parameters(self):
         param = [["Tolerance", "{0:.2f}%".format(self._tolerance * 100)]]
-        
         return param
 
     def set_parameters(self, param):

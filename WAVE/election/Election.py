@@ -2,7 +2,6 @@ class Election:
     def __init__(self):
         self._contestants = list()
         self._reported_results = list()
-        self._actual_results = list()
         self._ballots = list()
 
     def get_contestants(self):
@@ -16,12 +15,6 @@ class Election:
 
     def set_reported_results(self, reported_results):
         self._reported_results = reported_results
-
-    def get_actual_results(self):
-        return self._actual_results
-
-    def set_actual_results(self, actual_results):
-        self._actual_results = actual_results
 
     def get_ballots(self):
         return self._ballots

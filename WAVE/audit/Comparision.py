@@ -162,11 +162,11 @@ class Comparision(audit.Audit):
         # Update status
         self._refresh_status()
 
-        print("\n")
-        print("Ballot {}".format(ballot.get_audit_seq_num()))
-        print("Actual: {}".format(ballot.get_actual_value().get_name()))
-        print("Reported: {}".format(ballot.get_reported_value().get_name()))
-        print("Stopping Count: {}".format(self._stopping_count))
+        # print("\n")
+        # print("Ballot {}".format(ballot.get_audit_seq_num()))
+        # print("Actual: {}".format(ballot.get_actual_value().get_name()))
+        # print("Reported: {}".format(ballot.get_reported_value().get_name()))
+        # print("Stopping Count: {}".format(self._stopping_count))
 
     def _refresh_status(self):
         if self._stopping_count == 0:

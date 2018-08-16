@@ -79,3 +79,4 @@ class Pres2016:
 
         self._ballots = ballots
         self._election.set_ballots(ballots)
+
