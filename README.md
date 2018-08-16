@@ -1,3 +1,4 @@
+[![CircleCI](https://circleci.com/gh/zperumal/RIWAVE.svg?style=svg)](https://circleci.com/gh/zperumal/RIWAVE)
 # Rhode Island Wave
 A mathematically hot-swappable audit station designed for conducting RLA's in 
 Rhode Island.
