@@ -6,8 +6,8 @@ import election
 Based off of Dr. Stark's "Super-Simple Simultaneous Single-ballot Risk Limiting Audits"
 """
 
-class Comparision(audit.Audit):
-    name = "Comparision RLA"
+class Comparison(audit.Audit):
+    name = "Comparison RLA"
     status_codes = ["In Progress",
                     "Election Results \nVerified"]
 
@@ -78,11 +78,11 @@ class Comparision(audit.Audit):
         return "{} correct \nballots left".format(self._stopping_count)
 
     def get_status(self):
-        return Comparision.status_codes[self._status]
+        return Comparison.status_codes[self._status]
 
     @staticmethod
     def get_name():
-        return Comparision.name
+        return Comparison.name
 
     def get_parameters(self):
         param = [["Risk Limit", str(self._risk_limit * 100)],

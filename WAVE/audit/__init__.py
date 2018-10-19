@@ -3,7 +3,7 @@ import inspect
 
 from audit.Audit import Audit
 from audit.BallotPolling import BallotPolling
-from audit.Comparision import Comparision
+from audit.Comparison import Comparison
 # from audit.Bayesian import Bayesian
 
 

@@ -1,12 +1,12 @@
 import random
 import unittest
-from audit import Comparision
+from audit import Comparison
 import data_gen
 from election import Ballot
 
 class TestAudit(unittest.TestCase):
     def setup_comparison(self):
-        cp = Comparision()
+        cp = Comparison()
         return cp
 
 

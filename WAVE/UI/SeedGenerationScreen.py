@@ -11,6 +11,7 @@ from PyQt5.QtCore import pyqtSignal
 import random
 import audit
 import UI
+import UI.UIUtils
 
 class Ui_Seed_Generation(object):
 
@@ -18,6 +19,7 @@ class Ui_Seed_Generation(object):
     def setupUi(self, MainWindow):
         MainWindow.setObjectName("MainWindow")
         MainWindow.resize(800, 364)
+        UI.UIUtils.SetPallete(MainWindow)
         self.centralwidget = QtWidgets.QWidget(MainWindow)
         self.centralwidget.setObjectName("centralwidget")
         self.gridLayout = QtWidgets.QGridLayout(self.centralwidget)
