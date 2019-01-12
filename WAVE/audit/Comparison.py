@@ -1,6 +1,12 @@
 from math import log, ceil
 import audit
 import election
+import numpy as np
+import os
+
+os.sys.path.append("2018-bctool/code/")
+import bctool
+
 
 """
 Based off of Dr. Stark's "Super-Simple Simultaneous Single-ballot Risk Limiting Audits"
@@ -29,14 +35,17 @@ class Comparison(audit.Audit):
         self._status = 0
 
         self._winner = None
+        self._candidates = None
+        self.upset_prob = None
         self._cached_results = list()
         self._ballot_count = list()
+        self._reported_choices = dict()
 
-    def init(self, results, ballot_count):
+    def init(self, results, ballot_count, reported_choices):
         self._status = 0
         self._cached_results = list()
         self._ballot_count = ballot_count
-
+        self._reported_choices = reported_choices
         self._o1 = 0
         self._o2 = 0
         self._u1 = 0
@@ -45,6 +54,17 @@ class Comparison(audit.Audit):
         results_sorted = sorted(results,
                                 key=lambda r: r.get_percentage(),
                                 reverse=True)
+
+        self._candidates = []
+        for r in results_sorted:
+            self._candidates.append(r.get_contestant().get_name())
+        self._candidates.extend(["overvote", "undervote", "Write-in"])
+
+        self.bayesian_formatted_results = {k: {} for k in self._candidates}
+        for candidate in self.bayesian_formatted_results:
+            # This is a dict of dicts, where self.bayesian_formatted_results[i][j] is the number
+            # of votes that were reported for i and were actually for j
+            self.bayesian_formatted_results[candidate] = {j: 0 for j in self._candidates}
 
         self._winner = results_sorted[0].get_contestant()
 
@@ -75,7 +95,7 @@ class Comparison(audit.Audit):
             self._cached_results.append([result.get_contestant(), 0])
 
     def get_progress(self):
-        return "{} correct \nballots left".format(self._stopping_count)
+        return "{} correct \nballots left; Upset probability={}".format(self._stopping_count, self.upset_prob)
 
     def get_status(self):
         return Comparison.status_codes[self._status]
@@ -102,23 +122,58 @@ class Comparison(audit.Audit):
         self._u1_expected = float(param[4])
         self._u2_expected = float(param[5])
 
+    def compute_upset_prob(self, seed=1, num_trials=10000, n_winners=1):
+        strata = []
+        strata_sizes = []
+        print(self._reported_choices)
+        for reported in self._reported_choices:
+            strata.append(("Total", reported))
+            strata_sizes.append(self._reported_choices[reported])
+
+
+        strata_sample_tallies = []
+        strata_pseudocounts = []
+        for (collection, reported_choice) in strata:
+            stratum_sample_tally = []
+            stratum_pseudocounts = []
+            for actual_choice in self._candidates:
+                stratum_sample_tally.append(self.bayesian_formatted_results[reported_choice][actual_choice])
+                if reported_choice == actual_choice:
+                    stratum_pseudocounts.append(5)
+                else:
+                    stratum_pseudocounts.append(1)
+            strata_sample_tallies.append(np.array(stratum_sample_tally))
+            strata_pseudocounts.append(np.array(stratum_pseudocounts))
+        win_probs = bctool.compute_win_probs(strata_sample_tallies,
+                                       strata_pseudocounts,
+                                       strata_sizes,
+                                       seed,
+                                       num_trials,
+                                       self._candidates,
+                                       n_winners)
+        self.upset_prob = 1.0 - win_probs[0][1]
+        print(win_probs)
+
     def compute(self, ballot):
         # Flag if the stopping count needs to be recomputed mathematically
         recompute = True
 
+        actual_name = ballot.get_actual_value().get_name()
+        reported_name = ballot.get_reported_value().get_name()
+        self.bayesian_formatted_results[reported_name][actual_name] += 1
         # No discrepency in the ballot
         if ballot.get_actual_value() == ballot.get_reported_value():
             self._stopping_count -= 1
             recompute = False
 
-        # If the ballot is an undervote
+        # If the ballot is reported as an undervote
         if ballot.get_reported_value().get_id() == election.Undervote.CID:
             if ballot.get_actual_value().equals(self._winner):
                 self._u1 += 1
             else:
                 self._o1 += 1
 
-        # If the ballot is an overvote
+        # If the ballot is reported as an overvote
         elif ballot.get_reported_value().get_id() == election.Overvote.CID:
             if ballot.get_actual_value().equals(self._winner):
                 self._u1 += 1
@@ -129,6 +184,7 @@ class Comparison(audit.Audit):
         # loser
         elif ballot.get_reported_value().equals(self._winner) and \
                 not ballot.get_actual_value().equals(self._winner):
+
             self._o2 += 1
 
         # If the ballot is a reported vote for a loser, but is really a vote for the 
@@ -175,13 +231,14 @@ class Comparison(audit.Audit):
             self._status = 0
 
     def recompute(self, ballots, results):
-        self.init(results, self._ballot_count)
+        self.init(results, self._ballot_count, self._reported_choices)
 
         for ballot in ballots:
             self.compute(ballot)
             
             if self._stopping_count == 0:
                 return ballot
+        self.compute_upset_prob()
 
     def get_current_result(self):
         count = 0
