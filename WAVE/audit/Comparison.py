@@ -262,6 +262,13 @@ class Comparison(audit.Audit):
                 return ballot
         self.compute_upset_prob()
 
+    def update_reported_ballots(self, ballots, results):
+        self.init(results, self._ballot_count, self._reported_choices)
+        for ballot in ballots:
+            self.compute(ballot)
+            if self._stopping_count == 0:
+                return ballot
+
     def get_current_result(self):
         count = 0
 
