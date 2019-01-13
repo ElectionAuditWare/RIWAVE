@@ -94,8 +94,16 @@ class Comparison(audit.Audit):
         for result in results:
             self._cached_results.append([result.get_contestant(), 0])
 
-    def get_progress(self):
-        return "{} correct \nballots left; Upset probability={}".format(self._stopping_count, self.upset_prob)
+    def get_progress(self, final=False):
+        progress_str = ""
+        if final:
+            progress_str += "{} correct \nballots left; Upset probability={} \n".format(self._stopping_count, self.upset_prob)
+        for actual_candidate in self._candidates:
+            for reported_candidate in self._candidates:
+                count = self.bayesian_formatted_results[reported_candidate][actual_candidate]
+                if count != 0:
+                    progress_str += "Actual votes for {} reported in CVR for {}: {} \n".format(actual_candidate, reported_candidate,count)
+        return progress_str
 
     def get_status(self):
         return Comparison.status_codes[self._status]
