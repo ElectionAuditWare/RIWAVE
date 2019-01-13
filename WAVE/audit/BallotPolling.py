@@ -57,8 +57,12 @@ class BallotPolling(audit.Audit):
         print("Init T: {}".format(self._T))
         print("Init Margin: {}".format(self._margin))
 
-    def get_progress(self):
-        return "T = {}; upset_prob = {}".format(self._T, self.upset_prob)
+    def get_progress(self, final=False):
+        progress_str = ""
+        if final:
+            progress_str += "T = {}; upset_prob = {} \n".format(self._T, self.upset_prob)
+        progress_str += "Current results: \n {}".format(self.bayesian_formatted_results)
+        return progress_str
 
     def get_status(self):
        return BallotPolling.status_codes[self._status]
@@ -139,6 +143,11 @@ class BallotPolling(audit.Audit):
 
             if self._T > 9.9 or self._T < 0.011:
                 return ballot
+
+    def update_reported_ballots(self, ballots, results):
+        self.init(results, self._ballot_count)
+        for ballot in ballots:
+            self.compute(ballot)
 
     def get_current_result(self):
         count = 0

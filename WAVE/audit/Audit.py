@@ -7,7 +7,7 @@ class Audit(ABC):
         pass
 
     @abstractmethod
-    def get_progress(self):
+    def get_progress(self, final=False):
         pass
 
     @abstractmethod
@@ -29,6 +29,11 @@ class Audit(ABC):
 
     @abstractmethod
     def recompute(self, ballots, results):
+        pass
+
+    #updates the reported ballots but does not compute statistics
+    @abstractmethod
+    def update_reported_ballots(self, ballots, results):
         pass
 
     @abstractmethod
