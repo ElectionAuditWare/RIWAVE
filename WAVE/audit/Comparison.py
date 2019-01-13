@@ -94,17 +94,8 @@ class Comparison(audit.Audit):
         for result in results:
             self._cached_results.append([result.get_contestant(), 0])
 
-
-    def get_progress(self, final=False):
-        progress_str = ""
-        if final:
-            progress_str += "{} correct \nballots left; Upset probability={} \n".format(self._stopping_count, self.upset_prob)
-        for actual_candidate in self._candidates:
-            for reported_candidate in self._candidates:
-                count = self.bayesian_formatted_results[reported_candidate][actual_candidate]
-                if count != 0:
-                    progress_str += "Actual votes for {} reported in CVR for {}: {} \n".format(actual_candidate, reported_candidate,count)
-        return progress_str
+    def get_progress(self):
+        return "{} correct \nballots left; Upset probability={}".format(self._stopping_count, self.upset_prob)
 
     def get_status(self):
         return Comparison.status_codes[self._status]
@@ -163,6 +154,10 @@ class Comparison(audit.Audit):
         self.upset_prob = 1.0 - win_probs[0][1]
         print(win_probs)
 
+    def is_ballot_invalid(self, ballot):
+        return ballot.get_actual_value().get_id() == election.Undervote.CID or ballot.get_actual_value().get_id() == election.Overvote.CID
+
+
     def compute(self, ballot):
         # Flag if the stopping count needs to be recomputed mathematically
         recompute = True
@@ -170,44 +165,54 @@ class Comparison(audit.Audit):
         actual_name = ballot.get_actual_value().get_name()
         reported_name = ballot.get_reported_value().get_name()
         self.bayesian_formatted_results[reported_name][actual_name] += 1
+
+        total_num_candidates = len(self._candidates)
+        if "undervote" in self._candidates:
+            total_num_candidates -= 1
+        if "overvote" in self._candidates:
+            total_num_candidates -= 1
+
         # No discrepency in the ballot
         if ballot.get_actual_value() == ballot.get_reported_value():
             self._stopping_count -= 1
             recompute = False
-
-        # If the ballot is reported as an undervote
-        if ballot.get_reported_value().get_id() == election.Undervote.CID:
+        # If the ballot is reported as an undervote or an overvote
+        elif ballot.get_reported_value().get_id() == election.Undervote.CID or ballot.get_reported_value().get_id() == election.Overvote.CID:
+            # if actual is for winner, is 1-vote U
             if ballot.get_actual_value().equals(self._winner):
                 self._u1 += 1
-            else:
+            # if actual is for a valid loser, is 1-vote O
+            elif not self.is_ballot_invalid(ballot):
                 self._o1 += 1
-
-        # If the ballot is reported as an overvote
-        elif ballot.get_reported_value().get_id() == election.Overvote.CID:
-            if ballot.get_actual_value().equals(self._winner):
-                self._u1 += 1
+        # If reported is for winner:
+        elif ballot.get_reported_value().equals(self._winner):
+            # if actual is invalid, 1-vote O
+            if self.is_ballot_invalid(ballot):
+                self._o1 += 1
+            # if actual is for loser is 2-vote O
             else:
-                self._ol += 1
+                self._o2 += 1
 
-        # If the ballot is a reported vote for the winner, but is really a vote for the
-        # loser
-        elif ballot.get_reported_value().equals(self._winner) and \
-                not ballot.get_actual_value().equals(self._winner):
-
-            self._o2 += 1
-
-        # If the ballot is a reported vote for a loser, but is really a vote for the 
-        # winner
-        elif not ballot.get_reported_value().equals(self._winner) and \
-                ballot.get_actual_value().equals(self._winner):
-            self._u2 += 1
-
+        # If the ballot is a reported vote for a loser
+        elif not ballot.get_reported_value().equals(self._winner):
+            if not self.is_ballot_invalid(ballot):
+                # if actual is for winner, is 1-vote U
+                if ballot.get_actual_value().equals(self._winner):
+                    # In a 2-candidate election, this is a 2-vote understatement
+                    if total_num_candidates == 2:
+                        self._u2 += 1
+                    # if multiple candidates, this is a 1-vote understatement
+                    else:
+                        self._u1 += 1
+                # if reported is for different loser, is 1-vote O
+                else:
+                    self._o1 += 1
         # Error handling
         elif recompute:
             print("Error processing ballot {}".format(ballot.get_physical_ballot_num()))
             print("Actual: {}".format(ballot.get_actual_value().get_name()))
             print("Reported: {}".format(ballot.get_reported_value().get_name()))
-
+        print("u1={},o1={},u2={},o2={}".format(self._u1,self._o1,self._u2,self._o2))
         # Recacluate count using Stark's formula
         if recompute:
             self._stopping_count = ceil(-2 * self._inflator * ( \
@@ -244,16 +249,10 @@ class Comparison(audit.Audit):
 
         for ballot in ballots:
             self.compute(ballot)
+            
             if self._stopping_count == 0:
                 return ballot
         self.compute_upset_prob()
-
-    def update_reported_ballots(self, ballots, results):
-        self.init(results, self._ballot_count, self._reported_choices)
-        for ballot in ballots:
-            self.compute(ballot)
-            if self._stopping_count == 0:
-                return ballot
 
     def get_current_result(self):
         count = 0
