@@ -50,7 +50,6 @@ class Comparison(audit.Audit):
         self._o2 = 0
         self._u1 = 0
         self._u2 = 0
-
         results_sorted = sorted(results,
                                 key=lambda r: r.get_percentage(),
                                 reverse=True)
@@ -97,12 +96,16 @@ class Comparison(audit.Audit):
     def get_progress(self, final=False):
         progress_str = ""
         if final:
-            progress_str += "{} correct \nballots left; Upset probability={} \n".format(self._stopping_count, self.upset_prob)
+            progress_str += "{} correct \nballots left; Upset probability={} <br>".format(self._stopping_count, self.upset_prob)
+        progress_str += "<table> <tr> <th> {} </th><th> {} </th><th> {} </th><th> {} </th></tr>".format("Original CVR","Audit CVR", "Count", "Match")
         for actual_candidate in self._candidates:
             for reported_candidate in self._candidates:
                 count = self.bayesian_formatted_results[reported_candidate][actual_candidate]
+                match = actual_candidate==reported_candidate
                 if count != 0:
-                    progress_str += "Actual votes for {} reported in CVR for {}: {} \n".format(actual_candidate, reported_candidate,count)
+                    progress_str += "<tr> <td> {} </td><td> {} </td><td> {} </td><td> {} </td></tr>".format(actual_candidate,
+                                                                                             reported_candidate, count, match)
+        progress_str += "</table>"
         return progress_str
 
     def get_status(self):
@@ -239,7 +242,7 @@ class Comparison(audit.Audit):
 
         # Update status
         self._refresh_status()
-
+        
         # print("\n")
         # print("Ballot {}".format(ballot.get_audit_seq_num()))
         # print("Actual: {}".format(ballot.get_actual_value().get_name()))
