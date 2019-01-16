@@ -40,6 +40,7 @@ class Comparison(audit.Audit):
         self._cached_results = list()
         self._ballot_count = list()
         self._reported_choices = dict()
+        self._last_ballot = None
 
     def init(self, results, ballot_count, reported_choices):
         self._status = 0
@@ -50,6 +51,7 @@ class Comparison(audit.Audit):
         self._o2 = 0
         self._u1 = 0
         self._u2 = 0
+        self._last_ballot = None
         results_sorted = sorted(results,
                                 key=lambda r: r.get_percentage(),
                                 reverse=True)
@@ -95,17 +97,19 @@ class Comparison(audit.Audit):
 
     def get_progress(self, final=False):
         progress_str = ""
+        if self._last_ballot and self._last_ballot.get_actual_value().get_name() != self._last_ballot.get_reported_value().get_name():
+            progress_str = "<i>Discrepancy in ballot, Original CVR: {} Audit CVR: {}</i> <br>".format(self._last_ballot.get_actual_value().get_name(),self._last_ballot.get_reported_value().get_name())
         if final:
             progress_str += "{} correct \nballots left; Upset probability={} <br>".format(self._stopping_count, self.upset_prob)
-        progress_str += "<table> <tr> <th> {} </th><th> {} </th><th> {} </th><th> {} </th></tr>".format("Original CVR","Audit CVR", "Count", "Match")
-        for actual_candidate in self._candidates:
-            for reported_candidate in self._candidates:
-                count = self.bayesian_formatted_results[reported_candidate][actual_candidate]
-                match = actual_candidate==reported_candidate
-                if count != 0:
-                    progress_str += "<tr> <td> {} </td><td> {} </td><td> {} </td><td> {} </td></tr>".format(actual_candidate,
-                                                                                             reported_candidate, count, match)
-        progress_str += "</table>"
+            progress_str += "<table> <tr> <th> {} </th><th> {} </th><th> {} </th><th> {} </th></tr>".format("Original CVR","Audit CVR", "Count", "Match")
+            for actual_candidate in self._candidates:
+                for reported_candidate in self._candidates:
+                    count = self.bayesian_formatted_results[reported_candidate][actual_candidate]
+                    match = actual_candidate==reported_candidate
+                    if count != 0:
+                        progress_str += "<tr> <td> {} </td><td> {} </td><td> {} </td><td> {} </td></tr>".format(actual_candidate,
+                                                                                                 reported_candidate, count, match)
+            progress_str += "</table>"
         return progress_str
 
     def get_status(self):
@@ -172,7 +176,7 @@ class Comparison(audit.Audit):
     def compute(self, ballot):
         # Flag if the stopping count needs to be recomputed mathematically
         recompute = True
-
+        self._last_ballot = ballot
         actual_name = ballot.get_actual_value().get_name()
         reported_name = ballot.get_reported_value().get_name()
         self.bayesian_formatted_results[reported_name][actual_name] += 1
