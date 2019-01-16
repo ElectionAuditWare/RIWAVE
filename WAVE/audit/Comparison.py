@@ -98,7 +98,7 @@ class Comparison(audit.Audit):
     def get_progress(self, final=False):
         progress_str = ""
         if self._last_ballot and self._last_ballot.get_actual_value().get_name() != self._last_ballot.get_reported_value().get_name():
-            progress_str = "<i>Discrepancy in ballot, Original CVR: {} Audit CVR: {}</i> <br>".format(self._last_ballot.get_actual_value().get_name(),self._last_ballot.get_reported_value().get_name())
+            progress_str = "<i>Discrepancy in ballot, Original CVR: {} Audit CVR: {}</i> <br>".format(self._last_ballot.get_reported_value().get_name(),self._last_ballot.get_actual_value().get_name())
         if final:
             progress_str += "{} ballots additional ballots without discrepancies required;<br> Upset probability={} <br>".format(self._stopping_count, self.upset_prob)
             progress_str += "<table> <tr> <th> {} </th><th> {} </th><th> {} </th><th> {} </th></tr>".format("Original CVR","Audit CVR", "Count", "Match")
@@ -107,8 +107,8 @@ class Comparison(audit.Audit):
                     count = self.bayesian_formatted_results[reported_candidate][actual_candidate]
                     match = actual_candidate==reported_candidate
                     if count != 0:
-                        progress_str += "<tr> <td> {} </td><td> {} </td><td> {} </td><td> {} </td></tr>".format(actual_candidate,
-                                                                                                 reported_candidate, count, match)
+                        progress_str += "<tr> <td> {} </td><td> {} </td><td> {} </td><td> {} </td></tr>".format(reported_candidate,actual_candidate,
+                                                                                                  count, match)
             progress_str += "</table>"
         return progress_str
 
@@ -181,12 +181,7 @@ class Comparison(audit.Audit):
         reported_name = ballot.get_reported_value().get_name()
         self.bayesian_formatted_results[reported_name][actual_name] += 1
 
-        total_num_candidates = len(self._candidates)
-        if "undervote" in self._candidates:
-            total_num_candidates -= 1
-        if "overvote" in self._candidates:
-            total_num_candidates -= 1
-
+        total_num_candidates = len(set(self._candidates) - set(["overvote", "undervote", "Write-in"]))
         # No discrepency in the ballot
         if ballot.get_actual_value() == ballot.get_reported_value():
             self._stopping_count -= 1
