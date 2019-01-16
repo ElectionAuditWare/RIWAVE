@@ -100,7 +100,7 @@ class Comparison(audit.Audit):
         if self._last_ballot and self._last_ballot.get_actual_value().get_name() != self._last_ballot.get_reported_value().get_name():
             progress_str = "<i>Discrepancy in ballot, Original CVR: {} Audit CVR: {}</i> <br>".format(self._last_ballot.get_actual_value().get_name(),self._last_ballot.get_reported_value().get_name())
         if final:
-            progress_str += "{} correct \nballots left; Upset probability={} <br>".format(self._stopping_count, self.upset_prob)
+            progress_str += "{} ballots additional ballots without discrepancies required;<br> Upset probability={} <br>".format(self._stopping_count, self.upset_prob)
             progress_str += "<table> <tr> <th> {} </th><th> {} </th><th> {} </th><th> {} </th></tr>".format("Original CVR","Audit CVR", "Count", "Match")
             for actual_candidate in self._candidates:
                 for reported_candidate in self._candidates:
