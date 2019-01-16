@@ -94,6 +94,10 @@ class BallotPolling(audit.Audit):
         else:
             self._tolerance = float(param[0].replace("%", "")) / 100
 
+
+    def is_ballot_invalid(self, ballot):
+        return ballot.get_actual_value().get_id() == election.Undervote.CID or ballot.get_actual_value().get_id() == election.Overvote.CID
+
     def compute(self, ballot):
         ballot_vote = ballot.get_actual_value()
         ballot_name = ballot_vote.get_name()
@@ -106,8 +110,11 @@ class BallotPolling(audit.Audit):
                 # multiply Twl by sw`/0.5.
                 self._t_loser[lose_c] = 2 * self._t_loser[lose_c] * self._s_wl[lose_c]
         # Vote for reported loser
-        else:
+        elif not self.is_ballot_invalid(ballot):
             self._t_loser[ballot_name]  = 2 *  self._t_loser[ballot_name] * (1-self._s_wl[ballot_name])
+
+        else:
+            print("T is not updated since ballot was invalid")
 
         for i in range(len(self._cached_results)):
             if self._cached_results[i][0].equals(ballot_vote):
