@@ -41,12 +41,15 @@ class Comparison(audit.Audit):
         self._ballot_count = list()
         self._reported_choices = dict()
         self._last_ballot = None
+        self._risk = 1.0
+        self._sample_size = 0
 
     def init(self, results, ballot_count, reported_choices):
         self._status = 0
         self._cached_results = list()
         self._ballot_count = ballot_count
         self._reported_choices = reported_choices
+        self._sample_size = 0
         self._o1 = 0
         self._o2 = 0
         self._u1 = 0
@@ -79,6 +82,7 @@ class Comparison(audit.Audit):
                     self._u2_expected * log(1 + (1 / self._inflator))
                     )
                 ))
+        self._risk = 1.0
 
         print("Results:")
         
@@ -100,7 +104,7 @@ class Comparison(audit.Audit):
         if self._last_ballot and self._last_ballot.get_actual_value().get_name() != self._last_ballot.get_reported_value().get_name():
             progress_str = "<i>Discrepancy in ballot, Original CVR: {} Audit CVR: {}</i> <br>".format(self._last_ballot.get_reported_value().get_name(),self._last_ballot.get_actual_value().get_name())
         if final:
-            progress_str += "{} ballots additional ballots without discrepancies required;<br> Upset probability={} <br>".format(self._stopping_count, self.upset_prob)
+            progress_str += "Measured Risk = {};<br> Upset probability={} <br>".format(int(1000*self._risk) / 1000, self.upset_prob)
             progress_str += "<table> <tr> <th> {} </th><th> {} </th><th> {} </th><th> {} </th></tr>".format("Original CVR","Audit CVR", "Count", "Match")
             for actual_candidate in self._candidates:
                 for reported_candidate in self._candidates:
@@ -140,7 +144,7 @@ class Comparison(audit.Audit):
     def compute_upset_prob(self, seed=1, num_trials=10000, n_winners=1):
         strata = []
         strata_sizes = []
-        print(self._reported_choices)
+        # print(self._reported_choices)
         for reported in self._reported_choices:
             strata.append(("Total", reported))
             strata_sizes.append(self._reported_choices[reported])
@@ -180,8 +184,9 @@ class Comparison(audit.Audit):
         actual_name = ballot.get_actual_value().get_name()
         reported_name = ballot.get_reported_value().get_name()
         self.bayesian_formatted_results[reported_name][actual_name] += 1
+        self._sample_size += 1
 
-        total_num_candidates = len(set(self._candidates) - set(["overvote", "undervote", "Write-in"]))
+        total_num_candidates = len(set(self._candidates) - set(["overvote", "undervote"]))
         # No discrepency in the ballot
         if ballot.get_actual_value() == ballot.get_reported_value():
             self._stopping_count -= 1
@@ -254,6 +259,14 @@ class Comparison(audit.Audit):
         else:
             self._status = 0
 
+    def compute_risk(self):
+        p_val = 1.0
+        u = 2*self._inflator / self._diluted_margin
+        p_val *= (1 - 1. / u)**(self._sample_size)
+        p_val *= (1 - 1. / (2*self._inflator))**(-1*self._o1)
+        p_val *= (1 - 1. / (self._inflator)) ** (-1 * self._o2)
+        return p_val
+
     def recompute(self, ballots, results):
         self.init(results, self._ballot_count, self._reported_choices)
 
@@ -263,6 +276,7 @@ class Comparison(audit.Audit):
             if self._stopping_count == 0:
                 return ballot
         self.compute_upset_prob()
+        self._risk = self.compute_risk()
 
     def update_reported_ballots(self, ballots, results):
         self.init(results, self._ballot_count, self._reported_choices)
