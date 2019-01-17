@@ -73,8 +73,10 @@ class BallotPolling(audit.Audit):
     def get_progress(self, final=False):
         progress_str = ""
         if final:
-            progress_str += "T Winner {} vs candidate values = {}; upset_prob = {} \n".format(self._winner.get_name(), self._t_loser, self.upset_prob)
-        progress_str += "Current results: \n {}".format(self.bayesian_formatted_results)
+            for loser in self._t_loser:
+                progress_str += "Risk of reported winner vs. {} = {}<br />".format(loser, 1./self._t_loser[loser])
+            progress_str += "Upset probability = {} <br />".format(self.upset_prob)
+        progress_str += "Current results: <br /> {}".format(self.bayesian_formatted_results)
         return progress_str
 
     def get_status(self):
